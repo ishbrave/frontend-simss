@@ -17,6 +17,7 @@ export default function StockIn() {
   const [form, setForm] = useState({
     sparePartId: "",
     stockInQuantity: "",
+    stockInUnitPrice: "",
     supplier: "",
     notes: "",
   });
@@ -80,6 +81,7 @@ export default function StockIn() {
         body: JSON.stringify({
           sparePartId: form.sparePartId,
           stockInQuantity: form.stockInQuantity,
+          stockInUnitPrice: form.stockInUnitPrice,
           supplier: form.supplier,
           notes: form.notes,
         }),
@@ -90,7 +92,7 @@ export default function StockIn() {
         throw new Error(errorData.message || "Failed to record stock in");
       }
 
-      setForm({ sparePartId: "", stockInQuantity: "", supplier: "", notes: "" });
+      setForm({ sparePartId: "", stockInQuantity: "", stockInUnitPrice: "", supplier: "", notes: "" });
       setSuccess("Stock in recorded successfully.");
       fetchSpareParts();
     } catch (err) {
@@ -166,6 +168,23 @@ export default function StockIn() {
                 </label>
 
                 <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-600">Unit Price</span>
+                  <input
+                    name="stockInUnitPrice"
+                    value={form.stockInUnitPrice}
+                    onChange={handleChange}
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={inputClassName}
+                    placeholder="0.00"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <label className="block">
                   <span className="mb-2 block text-sm font-medium text-slate-600">Supplier</span>
                   <input
                     name="supplier"
@@ -175,6 +194,15 @@ export default function StockIn() {
                     placeholder="Supplier name"
                   />
                 </label>
+
+                <div className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-600">Total Price</span>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    {form.stockInQuantity && form.stockInUnitPrice
+                      ? `${(Number(form.stockInQuantity) * Number(form.stockInUnitPrice)).toFixed(2)} Frw`
+                      : "0.00 Frw"}
+                  </div>
+                </div>
               </div>
 
               <label className="block">
@@ -196,7 +224,7 @@ export default function StockIn() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setForm({ sparePartId: "", stockInQuantity: "", supplier: "", notes: "" })}
+                  onClick={() => setForm({ sparePartId: "", stockInQuantity: "", stockInUnitPrice: "", supplier: "", notes: "" })}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
                 >
                   <RefreshCcw size={17} />
@@ -268,7 +296,9 @@ export default function StockIn() {
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Name</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Category</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Unit Price</th>
                         <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Quantity</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Total Price</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-sky-50">
@@ -276,7 +306,9 @@ export default function StockIn() {
                         <tr key={part._id} className="transition hover:bg-sky-50/60">
                           <td className="px-6 py-4 font-medium text-slate-800">{part.name}</td>
                           <td className="px-6 py-4 text-sm text-slate-500">{part.category}</td>
+                          <td className="px-6 py-4 text-right text-sm font-semibold text-slate-800">{Number(part.unitPrice).toFixed(2)} Frw</td>
                           <td className="px-6 py-4 text-right text-sm font-semibold text-slate-800">{part.quantity}</td>
+                          <td className="px-6 py-4 text-right text-sm font-semibold text-slate-800">{(Number(part.unitPrice) * Number(part.quantity)).toFixed(2)} Frw</td>
                         </tr>
                       ))}
                     </tbody>

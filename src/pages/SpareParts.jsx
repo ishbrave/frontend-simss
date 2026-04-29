@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  BadgeDollarSign,
   Box,
   PackagePlus,
   PencilLine,
   Shapes,
   Trash2,
-  TriangleAlert,
   X,
 } from "lucide-react";
 
@@ -46,12 +44,9 @@ export default function SpareParts() {
   }, []);
 
   const summary = useMemo(() => {
-    const totalQuantity = spareParts.reduce((sum, part) => sum + Number(part.quantity || 0), 0);
-    const totalValue = spareParts.reduce((sum, part) => sum + Number(part.totalPrice || 0), 0);
-    const lowStock = spareParts.filter((part) => Number(part.quantity) <= 5).length;
     const categories = new Set(spareParts.map((part) => part.category)).size;
 
-    return { totalQuantity, totalValue, lowStock, categories };
+    return { categories };
   }, [spareParts]);
 
   const fetchSpareParts = async () => {
@@ -190,12 +185,6 @@ export default function SpareParts() {
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <SummaryCard icon={Box} label="Total Records" value={spareParts.length.toLocaleString()} />
           <SummaryCard icon={Shapes} label="Categories" value={summary.categories.toLocaleString()} />
-          <SummaryCard icon={TriangleAlert} label="Low Stock Items" value={summary.lowStock.toLocaleString()} />
-          <SummaryCard
-            icon={BadgeDollarSign}
-            label="Inventory Value"
-            value={`${summary.totalValue.toFixed(2)} Frw`}
-          />
         </section>
 
         {error && (
@@ -209,11 +198,8 @@ export default function SpareParts() {
             <div>
               <h2 className="text-xl font-semibold text-slate-800">Inventory Table</h2>
               <p className="mt-1 text-sm text-slate-500">
-                View quantities, category labels, and current stock value.
+                View category labels and manage your spare parts.
               </p>
-            </div>
-            <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-2 text-sm text-slate-500">
-              Total Qty: <span className="font-semibold text-slate-800">{summary.totalQuantity}</span>
             </div>
           </div>
 
@@ -236,9 +222,6 @@ export default function SpareParts() {
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Part</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Category</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Quantity</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Unit Price</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Total Value</th>
                     <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Actions</th>
                   </tr>
                 </thead>
@@ -253,21 +236,6 @@ export default function SpareParts() {
                         <span className="rounded-md border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
                           {part.category}
                         </span>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <span
-                          className={`inline-flex rounded-md px-3 py-1 text-sm font-semibold ${
-                            Number(part.quantity) <= 5 ? "bg-sky-100 text-sky-800" : "bg-sky-50 text-sky-700"
-                          }`}
-                        >
-                          {part.quantity}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 text-right text-sm text-slate-500">
-                        {Number(part.unitPrice).toFixed(2)} Frw
-                      </td>
-                      <td className="px-6 py-5 text-right text-sm font-semibold text-slate-800">
-                        {Number(part.totalPrice).toFixed(2)} Frw
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex justify-end gap-2">

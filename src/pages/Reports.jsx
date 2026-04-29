@@ -36,6 +36,7 @@ export default function Reports() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     fetchReport();
@@ -68,18 +69,30 @@ export default function Reports() {
   };
 
   const summary = useMemo(() => {
-    const totalIn = records.filter((record) => record.type === "IN").length;
-    const totalOut = records.filter((record) => record.type === "OUT").length;
-    const totalValueOut = records
-      .filter((record) => record.type === "OUT" && record.totalPrice)
-      .reduce((sum, record) => sum + Number(record.totalPrice), 0);
+    const filtered = filter === "all" ? records : records.filter((record) => record.type === filter);
+    const totalIn = filtered.filter((record) => record.type === "IN").length;
+    const totalOut = filtered.filter((record) => record.type === "OUT").length;
+    const totalValueOut = filtered
+      .filter((record) => record.type === "OUT")
+      .reduce((sum, record) => {
+        const price = record.totalPrice ?? record.stockOutTotalPrice ?? 0;
+        return sum + Number(price);
+      }, 0);
+    const totalValueIn = filtered
+      .filter((record) => record.type === "IN")
+      .reduce((sum, record) => {
+        const price = record.totalPrice ?? record.stockInTotalPrice ?? (record.quantity * (record.unitPrice ?? record.stockInUnitPrice ?? 0));
+        return sum + Number(price);
+      }, 0);
 
     return {
       totalIn,
       totalOut,
       totalValueOut,
+      totalValueIn,
+      totalTransactions: filtered.length,
     };
-  }, [records]);
+  }, [records, filter]);
 
   return (
     <div className="page-shell px-4 py-8 lg:px-8">
@@ -107,13 +120,13 @@ export default function Reports() {
         )}
 
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard icon={Activity} label="Total Transactions" value={records.length.toLocaleString()} tone="dark" />
+          <SummaryCard icon={Activity} label="Total Transactions" value={summary.totalTransactions.toLocaleString()} tone="dark" />
           <SummaryCard icon={ArrowDownToLine} label="Stock In Entries" value={summary.totalIn.toLocaleString()} />
           <SummaryCard icon={ArrowUpFromLine} label="Stock Out Entries" value={summary.totalOut.toLocaleString()} />
           <SummaryCard
             icon={BadgeDollarSign}
-            label="Total Out Value"
-            value={`${summary.totalValueOut.toFixed(2)} Frw`}
+            label={filter === "IN" ? "Total In Value" : filter === "OUT" ? "Total Out Value" : "Total Out Value"}
+            value={filter === "IN" ? `${summary.totalValueIn.toFixed(2)} Frw` : filter === "OUT" ? `${summary.totalValueOut.toFixed(2)} Frw` : `${summary.totalValueOut.toFixed(2)} Frw`}
           />
         </section>
 
@@ -125,6 +138,18 @@ export default function Reports() {
                 A combined view of stock in and stock out records.
               </p>
             </div>
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-slate-600">Filter:</label>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              >
+                <option value="all">All Transactions</option>
+                <option value="IN">Stock In Only</option>
+                <option value="OUT">Stock Out Only</option>
+              </select>
+            </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-600 text-white">
               <FileBarChart2 size={19} />
             </div>
@@ -134,7 +159,7 @@ export default function Reports() {
             <div className="flex h-64 items-center justify-center text-sm uppercase tracking-[0.25em] text-gray-500">
               Loading report
             </div>
-          ) : records.length === 0 ? (
+          ) : (filter === "all" ? records : records.filter((record) => record.type === filter)).length === 0 ? (
             <div className="px-6 py-16 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl border border-sky-100 bg-sky-50 text-sky-700">
                 <FileBarChart2 size={28} />
@@ -152,28 +177,25 @@ export default function Reports() {
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Part</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Category</th>
                     <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Quantity</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Rate / Supplier</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Unit Price</th>
                     <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em]">Total</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Recipient / Supplier</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Supplier / Recipient</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">Notes</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em]">User</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sky-50">
-                  {records.map((record, index) => {
+                  {(filter === "all" ? records : records.filter((record) => record.type === filter)).map((record, index) => {
                     const date = new Date(record.date).toLocaleString();
                     const name = record.sparePart?.name || "-";
                     const category = record.sparePart?.category || "-";
-                    const unitOrInfo =
-                      record.type === "OUT"
-                        ? `${Number(record.unitPrice || 0).toFixed(2)} Frw`
-                        : record.supplier || "-";
-                    const total =
-                      record.type === "OUT" && record.totalPrice
-                        ? `${Number(record.totalPrice).toFixed(2)} Frw`
-                        : "-";
-                    const issuedOrSupplier =
-                      record.type === "OUT" ? record.issuedTo || "-" : record.supplier || "-";
+                    const unitPriceValue = Number(record.unitPrice ?? record.stockInUnitPrice ?? record.stockOutUnitPrice ?? 0);
+                    const unitPrice = `${unitPriceValue.toFixed(2)} Frw`;
+                    const totalPriceValue = Number(
+                      record.totalPrice ?? record.stockInTotalPrice ?? record.stockOutTotalPrice ?? (record.quantity * unitPriceValue)
+                    );
+                    const total = totalPriceValue ? `${totalPriceValue.toFixed(2)} Frw` : "-";
+                    const supplierOrRecipient = record.type === "OUT" ? record.issuedTo || "-" : record.supplier || "-";
                     const user = record.createdBy?.username || "-";
 
                     return (
@@ -192,9 +214,9 @@ export default function Reports() {
                         <td className="px-6 py-4 text-sm font-medium text-slate-800">{name}</td>
                         <td className="px-6 py-4 text-sm text-slate-500">{category}</td>
                         <td className="px-6 py-4 text-right text-sm font-semibold text-slate-800">{record.quantity}</td>
-                        <td className="px-6 py-4 text-right text-sm text-slate-500">{unitOrInfo}</td>
+                        <td className="px-6 py-4 text-right text-sm text-slate-500">{unitPrice}</td>
                         <td className="px-6 py-4 text-right text-sm font-semibold text-slate-800">{total}</td>
-                        <td className="px-6 py-4 text-sm text-slate-500">{issuedOrSupplier}</td>
+                        <td className="px-6 py-4 text-sm text-slate-500">{supplierOrRecipient}</td>
                         <td className="px-6 py-4 text-sm text-slate-500">{record.notes || "-"}</td>
                         <td className="px-6 py-4">
                           <span className="inline-flex items-center gap-2 rounded-md border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
